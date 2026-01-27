@@ -1,7 +1,5 @@
 # Customer Inbox Triage App
 
-> **Important Note**: This application is intentionally imperfect. It was designed for the L2 Technical Assessment to provide opportunities for product, workflow, logic, and AI improvements.
-
 ## Overview
 
 The Customer Inbox Triage app is a lightweight AI-powered tool that helps classify customer support messages and recommend actions. It uses OpenAI's API to categorize messages, applies rule-based urgency scoring, and suggests next steps based on predefined templates.
@@ -71,41 +69,6 @@ Support teams waste time manually reading and triaging customer messages. This t
 4. **Display Results**: Shows category, urgency tag, recommended action, and AI reasoning
 5. **History**: All analyses are saved to localStorage and viewable in the History tab
 
-## Known Issues & Intentional Flaws
-
-This application is deliberately flawed to create opportunities for improvement during the L2 assessment.
-
-### UX/UI Issues
-- ❌ No loading state during API calls
-- ❌ No error state display
-- ❌ No input validation (empty messages allowed)
-- ❌ No character counter
-- ❌ Poor spacing and visual hierarchy
-- ❌ Urgency tags barely differentiated visually
-- ❌ Results displayed in cramped layout
-
-### Workflow Issues
-- ❌ Only processes one message at a time
-- ❌ No message history
-- ❌ No way to copy results
-- ❌ No edit capability for outputs
-- ❌ No reset button
-
-### Logic Issues
-- ❌ Urgency rules are oversimplified
-  - Assumes "!" always means high urgency
-  - Assumes short messages are low urgency
-  - Ignores actual urgency keywords
-- ❌ Template mismatches (e.g., "Feature Request" → "Check billing portal")
-- ❌ No handling of edge cases (empty input, very long messages)
-
-### AI/LLM Issues
-- ❌ Prompt is too vague
-- ❌ No examples or structure in prompt
-- ❌ No output format constraints
-- ❌ Inconsistent category names possible
-- ❌ Reasoning field often vague
-- ❌ No confidence scoring
 
 ## Example Test Messages
 
@@ -159,19 +122,9 @@ I tried to update my payment method but the page keeps loading forever. Is this 
 - No validation prevents submission
 - May cause API errors or unexpected behavior
 
-## Improvement Opportunities
-
-Students working on this project can improve:
-
-1. **UX Enhancements**: Add loading states, error handling, better layout, input validation
-2. **Workflow Improvements**: Add history, copy functionality, batch processing, reset button
-3. **Logic Refinements**: Improve urgency rules, fix template mismatches, add fallbacks
-4. **AI Optimizations**: Better prompts, structured outputs, confidence scoring, examples
-5. **Additional Features**: Confidence metrics, editable categories, priority queues, analytics
-
 ## Security Note
 
-⚠️ **Warning**: This application exposes the Groq API key in the browser (using `dangerouslyAllowBrowser: true`). This is acceptable for local development and assessment purposes but should **NEVER** be done in production. In a real application, API calls should be made from a secure backend server.
+⚠️ **Warning**: This application exposes the Groq API key in the browser (using `dangerouslyAllowBrowser: true`). This is acceptable for local development only but should **NEVER** be done in production. In a real application, API calls should be made from a secure backend server.
 
 ## Why Groq Instead of OpenAI?
 
@@ -183,4 +136,4 @@ Students working on this project can improve:
 
 ## License
 
-This project is for educational and assessment purposes only.
+This project is for educational purposes only.
