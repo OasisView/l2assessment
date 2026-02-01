@@ -26,21 +26,22 @@ function AnalyzePage() {
 
     setIsLoading(true)
     setResults(null)
-    
+
     try {
       // Run categorization (LLM call)
       const { category, reasoning } = await categorizeMessage(message)
-      
+
       // Calculate urgency (rule-based)
-      const urgency = calculateUrgency(message)
-      
+      const { urgencyScore, urgency } = calculateUrgency(message)
+
       // Get recommended action (template-based)
       const recommendedAction = getRecommendedAction(category)
-      
+
       const analysisResult = {
         message,
         category,
         urgency,
+        urgencyScore,
         recommendedAction,
         reasoning,
         timestamp: new Date().toISOString()
@@ -128,11 +129,14 @@ function AnalyzePage() {
         {results && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Analysis Results</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <div className="text-sm font-semibold text-gray-600 mb-1">Category</div>
-                <div className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
+                <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${
+                  results.category === 'Critical Escalation' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
                   {results.category}
                 </div>
               </div>
@@ -140,6 +144,7 @@ function AnalyzePage() {
               <div>
                 <div className="text-sm font-semibold text-gray-600 mb-1">Urgency Level</div>
                 <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${
+                  results.urgency === 'Critical' ? 'bg-red-300 text-red-900' :
                   results.urgency === 'High' ? 'bg-red-200 text-red-900' :
                   results.urgency === 'Medium' ? 'bg-yellow-200 text-yellow-900' :
                   'bg-green-200 text-green-900'
@@ -176,7 +181,7 @@ function AnalyzePage() {
                 }}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 font-semibold"
               >
-                📋 Copy Results
+                Copy Results
               </button>
             </div>
           </div>

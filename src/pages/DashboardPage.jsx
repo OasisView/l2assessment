@@ -15,7 +15,14 @@ function DashboardPage() {
   }, [])
 
   const loadDashboardData = () => {
-    const history = JSON.parse(localStorage.getItem('triageHistory') || '[]')
+    const rawHistory = JSON.parse(localStorage.getItem('triageHistory') || '[]')
+    // Normalize urgency: old entries stored the full object {urgencyScore, urgency}
+    const history = rawHistory.map(item => ({
+      ...item,
+      urgency: typeof item.urgency === 'object' && item.urgency !== null
+        ? item.urgency.urgency
+        : item.urgency
+    }))
     const today = new Date().toDateString()
     const todayMessages = history.filter(item => 
       new Date(item.timestamp).toDateString() === today

@@ -7,9 +7,16 @@ function HomePage() {
 
   useEffect(() => {
     // Load stats from localStorage
-    const history = JSON.parse(localStorage.getItem('triageHistory') || '[]')
+    const rawHistory = JSON.parse(localStorage.getItem('triageHistory') || '[]')
+    // Normalize urgency: old entries stored the full object {urgencyScore, urgency}
+    const history = rawHistory.map(item => ({
+      ...item,
+      urgency: typeof item.urgency === 'object' && item.urgency !== null
+        ? item.urgency.urgency
+        : item.urgency
+    }))
     const today = new Date().toDateString()
-    const todayCount = history.filter(item => 
+    const todayCount = history.filter(item =>
       new Date(item.timestamp).toDateString() === today
     ).length
 
@@ -108,10 +115,14 @@ function HomePage() {
                         "{item.message.substring(0, 60)}..."
                       </div>
                       <div className="flex items-center space-x-2 mt-1">
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          item.category === 'Critical Escalation' ? 'bg-red-100 text-red-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
                           {item.category}
                         </span>
                         <span className={`text-xs px-2 py-1 rounded ${
+                          item.urgency === 'Critical' ? 'bg-red-200 text-red-900' :
                           item.urgency === 'High' ? 'bg-red-100 text-red-800' :
                           item.urgency === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-green-100 text-green-800'

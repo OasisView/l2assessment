@@ -12,7 +12,14 @@ function HistoryPage() {
 
   const loadHistory = () => {
     const savedHistory = JSON.parse(localStorage.getItem('triageHistory') || '[]')
-    setHistory(savedHistory)
+    // Normalize urgency: old entries stored the full object {urgencyScore, urgency}
+    const normalized = savedHistory.map(item => ({
+      ...item,
+      urgency: typeof item.urgency === 'object' && item.urgency !== null
+        ? item.urgency.urgency
+        : item.urgency
+    }))
+    setHistory(normalized)
   }
 
   const clearHistory = () => {
@@ -117,10 +124,14 @@ function HistoryPage() {
                       "{item.message.substring(0, 100)}{item.message.length > 100 ? '...' : ''}"
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
+                      <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                        item.category === 'Critical Escalation' ? 'bg-red-100 text-red-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
                         {item.category}
                       </span>
                       <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                        item.urgency === 'Critical' ? 'bg-red-300 text-red-900' :
                         item.urgency === 'High' ? 'bg-red-200 text-red-900' :
                         item.urgency === 'Medium' ? 'bg-yellow-200 text-yellow-900' :
                         'bg-green-200 text-green-900'
