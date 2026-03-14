@@ -1,83 +1,62 @@
 /**
- * Calculate urgency score and level for customer support messages
- * Score ranges: 0-100
- * Levels: Low (0-39), Medium (40-69), High (70-89), Critical (90-100)
+ * Calculate urgency level for a customer support message.
+ * Returns "High", "Medium", or "Low".
  */
-
 export function calculateUrgency(message) {
-  let urgencyScore = 50
+  const lower = message.toLowerCase();
+  let score = 50;
 
-  const exclamationCount = (message.match(/!/g) || []).length
-  urgencyScore += exclamationCount * 30
-
-  if (message.length < 50) urgencyScore -= 40
-  if (message.length < 20) urgencyScore -= 60
-
-  if (message === message.toUpperCase() && message.length > 10) {
-    urgencyScore -= 50
+  // Critical outage signals: +40 if any match
+  const criticalOutageTerms = ['production down', 'outage', 'data loss', 'security breach', 'site is down', 'app is down', 'completely down'];
+  if (criticalOutageTerms.some(term => lower.includes(term))) {
+    score += 40;
   }
 
-  const politeWords = ['please', 'thank', 'thanks', 'appreciate', 'kindly']
-  politeWords.forEach(word => {
-    if (message.toLowerCase().includes(word)) urgencyScore -= 15
-  })
+  // Urgent language: +15 per match
+  const urgentTerms = ['urgent', 'asap', 'immediately', 'critical', 'emergency', 'blocking', 'blocked', 'losing money', 'deadline', 'p0', 'p1', 'sev1'];
+  urgentTerms.forEach(term => {
+    if (lower.includes(term)) score += 15;
+  });
 
-  if (message.includes('?')) urgencyScore -= 25
+  // Error signals: +8 per match
+  const errorTerms = ['error', 'crash', 'broken', 'not working', 'bug', 'failed', '500', '404'];
+  errorTerms.forEach(term => {
+    if (lower.includes(term)) score += 8;
+  });
 
-  const now = new Date()
-  if (now.getDay() === 0 || now.getDay() === 6) {
-    urgencyScore -= 20
-  }
-  if (now.getHours() < 9 || now.getHours() > 17) {
-    urgencyScore -= 15
-  }
+  // Frustration signals: +10 per match
+  const frustrationTerms = ['frustrated', 'unacceptable', 'ridiculous', 'terrible', 'horrible', 'worst'];
+  frustrationTerms.forEach(term => {
+    if (lower.includes(term)) score += 10;
+  });
 
-  const positiveWords = ['happy', 'love', 'great', 'excellent', 'wonderful']
-  positiveWords.forEach(word => {
-    if (message.toLowerCase().includes(word)) urgencyScore -= 20
-  })
-
-  // NEW: Critical urgency indicators (threats, harassment, abuse)
-  const criticalWords = ['threaten', 'threat', 'sue', 'lawyer', 'legal action', 
-                         'cursed', 'curse', 'harass', 'abuse', 'attack', 
-                         'worst', 'horrible', 'terrible']
-  criticalWords.forEach(word => {
-    if (message.toLowerCase().includes(word)) urgencyScore += 50
-  })
-
-  // NEW: High urgency indicators (server down, critical bugs)
-  const highUrgencyWords = ['server down', 'system down', 'not working at all', 
-                            'completely broken', 'urgent', 'emergency', 'asap',
-                            'immediately', 'critical']
-  highUrgencyWords.forEach(word => {
-    if (message.toLowerCase().includes(word)) urgencyScore += 35
-  })
-
-  // NEW: Complaint indicators (negative but not threatening)
-  const complaintWords = ['awful', 'terrible', 'horrible', 'disappointed', 
-                         'frustrated', 'angry', 'unacceptable', 'poor service']
-  complaintWords.forEach(word => {
-    if (message.toLowerCase().includes(word)) urgencyScore += 20
-  })
-
-  // Ensure score stays within bounds
-  if (urgencyScore > 100) urgencyScore = 100
-  if (urgencyScore < 0) urgencyScore = 0
-
-  // FIXED: Proper urgency level thresholds
-  let urgencyLevel
-  if (urgencyScore >= 90) {
-    urgencyLevel = "Critical"
-  } else if (urgencyScore >= 70) {
-    urgencyLevel = "High"
-  } else if (urgencyScore >= 40) {
-    urgencyLevel = "Medium"
-  } else {
-    urgencyLevel = "Low"
+  // Multiple exclamation marks (2+): +10 once
+  if ((message.match(/!/g) || []).length >= 2) {
+    score += 10;
   }
 
-  return {
-    urgencyScore,
-    urgency: urgencyLevel
+  // Low urgency language: -20 per match
+  const lowUrgencyTerms = ['feature request', 'suggestion', 'would be nice', 'someday', 'eventually'];
+  lowUrgencyTerms.forEach(term => {
+    if (lower.includes(term)) score -= 20;
+  });
+
+  // Positive tone: -15 per match
+  const positiveTerms = ['thank you', 'thanks', 'appreciate', 'happy', 'love', 'great', 'excellent', 'wonderful'];
+  positiveTerms.forEach(term => {
+    if (lower.includes(term)) score -= 15;
+  });
+
+  // Question with no error signals: -10
+  const hasErrorSignal = errorTerms.some(term => lower.includes(term));
+  if (message.includes('?') && score <= 55 && !hasErrorSignal) {
+    score -= 10;
   }
+
+  // Clamp to [0, 100]
+  score = Math.min(100, Math.max(0, score));
+
+  if (score >= 70) return "High";
+  if (score >= 40) return "Medium";
+  return "Low";
 }

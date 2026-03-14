@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { categorizeMessage } from '../utils/llmHelper'
 import { calculateUrgency } from '../utils/urgencyScorer'
-import { getRecommendedAction } from '../utils/templates'
+import { getRecommendedAction, shouldEscalate } from '../utils/templates'
 
 function AnalyzePage() {
   const [message, setMessage] = useState('')
@@ -10,7 +10,6 @@ function AnalyzePage() {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    // Check for example message from home page
     const exampleMessage = localStorage.getItem('exampleMessage')
     if (exampleMessage) {
       setMessage(exampleMessage)
@@ -28,28 +27,24 @@ function AnalyzePage() {
     setResults(null)
 
     try {
-      // Run categorization (LLM call)
-      const { category, reasoning } = await categorizeMessage(message)
-
-      // Calculate urgency (rule-based)
-      const { urgencyScore, urgency } = calculateUrgency(message)
-
-      // Get recommended action (template-based)
-      const recommendedAction = getRecommendedAction(category)
+      const { category, confidence, reasoning } = await categorizeMessage(message)
+      const urgency = calculateUrgency(message)
+      const recommendedAction = getRecommendedAction(category, urgency)
+      const escalate = shouldEscalate(category, urgency)
 
       const analysisResult = {
         message,
         category,
+        confidence,
         urgency,
-        urgencyScore,
         recommendedAction,
         reasoning,
+        escalate,
         timestamp: new Date().toISOString()
       }
 
       setResults(analysisResult)
 
-      // Save to history
       const history = JSON.parse(localStorage.getItem('triageHistory') || '[]')
       history.push(analysisResult)
       localStorage.setItem('triageHistory', JSON.stringify(history))
@@ -64,6 +59,30 @@ function AnalyzePage() {
   const handleClear = () => {
     setMessage('')
     setResults(null)
+  }
+
+  const getCategoryBadgeClass = (category) => {
+    switch (category) {
+      case 'Urgent Outage':     return 'bg-red-100 text-red-800'
+      case 'Technical Problem': return 'bg-orange-100 text-orange-800'
+      case 'Billing Issue':     return 'bg-yellow-100 text-yellow-800'
+      case 'Feature Request':   return 'bg-purple-100 text-purple-800'
+      default:                  return 'bg-blue-100 text-blue-800'
+    }
+  }
+
+  const getConfidenceBarClass = (confidence) => {
+    if (confidence >= 80) return 'bg-green-500'
+    if (confidence >= 60) return 'bg-yellow-500'
+    return 'bg-red-400'
+  }
+
+  const getUrgencyBadgeClass = (urgency) => {
+    switch (urgency) {
+      case 'High':   return 'bg-red-200 text-red-900'
+      case 'Medium': return 'bg-yellow-200 text-yellow-900'
+      default:       return 'bg-green-200 text-green-900'
+    }
   }
 
   return (
@@ -130,29 +149,46 @@ function AnalyzePage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Analysis Results</h2>
 
+            {/* Escalation Banner */}
+            {results.escalate === true && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-300 rounded-lg">
+                <p className="text-red-800 font-semibold">Escalation Required — Route this ticket to engineering or billing immediately.</p>
+              </div>
+            )}
+
             <div className="space-y-4">
+              {/* Category */}
               <div>
                 <div className="text-sm font-semibold text-gray-600 mb-1">Category</div>
-                <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${
-                  results.category === 'Critical Escalation' ? 'bg-red-100 text-red-800' :
-                  'bg-blue-100 text-blue-800'
-                }`}>
+                <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${getCategoryBadgeClass(results.category)}`}>
                   {results.category}
                 </div>
               </div>
 
+              {/* Confidence */}
+              <div>
+                <div className="text-sm font-semibold text-gray-600 mb-1">
+                  Confidence {results.confidence !== null ? `${results.confidence}%` : '—'}
+                </div>
+                {results.confidence !== null && (
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className={`h-3 rounded-full ${getConfidenceBarClass(results.confidence)}`}
+                      style={{ width: `${results.confidence}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Urgency */}
               <div>
                 <div className="text-sm font-semibold text-gray-600 mb-1">Urgency Level</div>
-                <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${
-                  results.urgency === 'Critical' ? 'bg-red-300 text-red-900' :
-                  results.urgency === 'High' ? 'bg-red-200 text-red-900' :
-                  results.urgency === 'Medium' ? 'bg-yellow-200 text-yellow-900' :
-                  'bg-green-200 text-green-900'
-                }`}>
+                <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${getUrgencyBadgeClass(results.urgency)}`}>
                   {results.urgency}
                 </div>
               </div>
 
+              {/* Recommended Action */}
               <div>
                 <div className="text-sm font-semibold text-gray-600 mb-1">Recommended Action</div>
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
@@ -160,6 +196,7 @@ function AnalyzePage() {
                 </div>
               </div>
 
+              {/* AI Reasoning */}
               <div>
                 <div className="text-sm font-semibold text-gray-600 mb-1">AI Reasoning</div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -175,7 +212,14 @@ function AnalyzePage() {
             <div className="mt-6 pt-4 border-t border-gray-200">
               <button
                 onClick={() => {
-                  const text = `Category: ${results.category}\nUrgency: ${results.urgency}\nRecommendation: ${results.recommendedAction}\n\nReasoning: ${results.reasoning}`
+                  const text = [
+                    `Category: ${results.category}`,
+                    `Confidence: ${results.confidence !== null ? results.confidence + '%' : 'N/A'}`,
+                    `Urgency: ${results.urgency}`,
+                    `Escalate: ${results.escalate}`,
+                    `Recommendation: ${results.recommendedAction}`,
+                    `Reasoning: ${results.reasoning}`
+                  ].join('\n')
                   navigator.clipboard.writeText(text)
                   alert('Results copied to clipboard!')
                 }}
